@@ -119,8 +119,27 @@ const RepositoryItem = ( { id, name, owner, stargazers, primaryLanguage, url, vi
                                 </Button> ) }
                         </Mutation> ) }
                 </div>
+                <div className="RepositoryItem-description">
+                <div>
+                    { primaryLanguage && <span>{ primaryLanguage.name }</span>}
+                </div>
+                <div>
+                    { owner &&
+                        ( <span>
+                            Owner: <a href={ owner.url }>{ owner.login }</a>
+                        </span>)}
+                </div>
+                <div>
+                    <Mutation mutation={ CHANGE_WATCHERS_REPOSITORY } variables={ { id, subscriberState: viewerSubscription === 'UNSUBSCRIBED' ? 'SUBSCRIBED' :  'UNSUBSCRIBED' } }>
+                        { ( updateSubscription ) => (
+                            <Button className="RepositoryItem-title-action" onClick={ updateSubscription }>
+                                {viewerSubscription === 'UNSUBSCRIBED' ? 'Subscribe' :  'Unsubscribe' }
+                            </Button> ) }
+                    </Mutation> 
+                </div>
+            </div>
             </div>
         </div>) 
 }
 
-export default compose(graphql(ADD_STAR_REPOSITORY),graphql(REMOVE_STAR_REPOSITORY))(RepositoryItem)
+export default compose(graphql(ADD_STAR_REPOSITORY))(RepositoryItem)
