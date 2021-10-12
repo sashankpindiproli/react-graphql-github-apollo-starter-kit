@@ -4,8 +4,9 @@ import { Mutation } from 'react-apollo';
 import { graphql } from 'react-apollo';
 import Button from '../../Button';
 import Link from '../../Link';
+import REPOSITORY_FRAGMENT from '../fragment'; 
 import '../style.css';
-import compose from 'recompose/compose'
+import compose from 'recompose/compose';
 
 const ADD_STAR_REPOSITORY = gql`
     mutation($id: ID!) {
@@ -41,6 +42,45 @@ const CHANGE_WATCHERS_REPOSITORY = gql`
     }
 `;
 
+const updateRemoveStar = ( client, { data: { removeStar: { starrable: { id } } } }) => {
+    const repository = client.readFragment( {
+        id: `Repository:${ id }`,
+        fragment: REPOSITORY_FRAGMENT,
+    } );
+    const totalCount = repository.stargazers.totalCount - 1;
+
+    client.writeFragment( {
+        id: `Repository:${ id }`,
+        fragment: REPOSITORY_FRAGMENT,
+        data: {
+            ...repository,
+            stargazers: {
+                ...repository.stargazers,
+                totalCount
+            }
+        }
+    } );
+};
+
+const updateAddStar = ( client, { data: { addStar: { starrable: { id } } } } ) => {
+    const repository = client.readFragment( {
+        id: `Repository:${ id }`,
+        fragment: REPOSITORY_FRAGMENT
+    } );
+    const totalCount = repository.stargazers.totalCount + 1;
+
+    client.writeFragment( {
+        id: `Repository:${ id }`,
+        fragment: REPOSITORY_FRAGMENT,
+        data: {
+            ...repository,
+            stargazers: {
+                ...repository.stargazers,
+                totalCount
+            }
+        }
+    } );
+}
 /*export default ( { id, name, owner, stargazers, primaryLanguage, url, viewerSubscription, viewerHasStarred } ) =>
 {
     return (
@@ -91,15 +131,6 @@ const CHANGE_WATCHERS_REPOSITORY = gql`
 
 const RepositoryItem = ( { id, name, owner, stargazers, primaryLanguage, url, viewerSubscription, viewerHasStarred,...props } ) => {
 
-    const invokeStarredRepository = ( repositoryId ) => {
-        const { mutate } = props;
-        mutate( {
-            variables: {
-                id: repositoryId
-            }
-        } )
-    }
-    
     return (
         <div key={ id }>
             <div className="RepositoryItem-title">
@@ -108,14 +139,16 @@ const RepositoryItem = ( { id, name, owner, stargazers, primaryLanguage, url, vi
                 </h2>
                 <div >
                     { !viewerHasStarred ? (
-                            <Button className="RepositoryItem-title-action" onClick={() => invokeStarredRepository(id)}>
-                                { stargazers.totalCount } Star
-                            </Button>
-                     ) :
-                        ( <Mutation mutation={ REMOVE_STAR_REPOSITORY } variables={ { id } }>
+                        <Mutation mutation={ ADD_STAR_REPOSITORY } variables={ { id } } update={ updateAddStar }>
+                            {(addStar) => (
+                                <Button className="RepositoryItem-title-action" onClick={addStar}>
+                                    { stargazers.totalCount } Star
+                                </Button> ) }
+                        </Mutation> ) :
+                        ( <Mutation mutation={ REMOVE_STAR_REPOSITORY } variables={ { id } } update={updateRemoveStar}>
                             {( removeStar ) => (
                                 <Button className="RepositoryItem-title-action" onClick={ removeStar }>
-                                    Unstar
+                                    { stargazers.totalCount } Unstar
                                 </Button> ) }
                         </Mutation> ) }
                 </div>
@@ -126,11 +159,11 @@ const RepositoryItem = ( { id, name, owner, stargazers, primaryLanguage, url, vi
                 <div>
                     { owner &&
                         ( <span>
-                            Owner: <a href={ owner.url }>{ owner.login }</a>
+                            :<a href={ owner.url }>{ owner.login }</a>
                         </span>)}
                 </div>
                 <div>
-                    <Mutation mutation={ CHANGE_WATCHERS_REPOSITORY } variables={ { id, subscriberState: viewerSubscription === 'UNSUBSCRIBED' ? 'SUBSCRIBED' :  'UNSUBSCRIBED' } }>
+                        <Mutation mutation={ CHANGE_WATCHERS_REPOSITORY } variables={ { id, subscriberState: viewerSubscription === 'UNSUBSCRIBED' ? 'SUBSCRIBED' : 'UNSUBSCRIBED' } }>
                         { ( updateSubscription ) => (
                             <Button className="RepositoryItem-title-action" onClick={ updateSubscription }>
                                 {viewerSubscription === 'UNSUBSCRIBED' ? 'Subscribe' :  'Unsubscribe' }
@@ -142,4 +175,4 @@ const RepositoryItem = ( { id, name, owner, stargazers, primaryLanguage, url, vi
         </div>) 
 }
 
-export default compose(graphql(ADD_STAR_REPOSITORY))(RepositoryItem)
+export default (RepositoryItem)
